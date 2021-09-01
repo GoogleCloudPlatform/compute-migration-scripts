@@ -1,3 +1,16 @@
+# Copyright 2021 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import time
 import uuid
 
@@ -16,7 +29,7 @@ region_operations_client = compute_v1.RegionOperationsClient()
 region_instance_group_managers_client = compute_v1.RegionInstanceGroupManagersClient()
 
 
-class MIGMigrator:
+class StatefulMIGMigrator:
     def __init__(self, args):
         self.project = args.project if args.project else google.auth.default()[1]
 
@@ -160,7 +173,7 @@ class MIGMigrator:
                 region=self.target_region,
                 instance_group_manager=self.mig_name,
                 region_instance_group_managers_create_instances_request_resource={
-                    "instances": [{"name": self.target_instance_name,}]
+                    "instances": [{"name": self.target_instance_name}]
                 },
             )
 
@@ -206,7 +219,7 @@ class MIGMigrator:
             print(f"Instance {self.source_instance.name} stopped")
             print("==========")
 
-        # Step 2. For all disks create images
+        # Step 2. Create images for all disks
 
         disk_configs = []
 
@@ -240,7 +253,7 @@ class MIGMigrator:
         print(f"MIG {self.mig_name} created")
         print("==========")
 
-        # Step 5. Deleting source image
+        # Step 5. Delete source image if needed
 
         if self.delete_source_instance:
             print(f"Deleting source instance {self.source_instance_name}")
@@ -248,7 +261,7 @@ class MIGMigrator:
             print(f"Instance {self.source_instance_name} deleted")
             print("==========")
 
-        # Step 6. Adding instance to MIG
+        # Step 6. Add instance to MIG
 
         print(f"Adding instance {self.target_instance_name} to {self.mig_name} ... ")
         self._add_instance_to_mig()
