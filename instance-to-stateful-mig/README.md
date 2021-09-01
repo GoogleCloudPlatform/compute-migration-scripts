@@ -16,7 +16,7 @@ If you want to do the same manually, you can use this [tutorial](https://cloud.g
 
 To run this script you need to meet the following criteria:
 
-* It requires Python version >= 3.6.
+* Python version >= 3.6.
 * You need `pipenv` or some other virtual environment manager to install the script dependencies.
 * Yout need to enable the [Compute Engine API](https://cloud.google.com/compute/)
 * **Important** Your instance have to be stopped during the script execution
@@ -42,7 +42,7 @@ export GOOGLE_APPLICATION_CREDENTIALS="/path/to/keyfile.json"
 * Clone the repository and move to the folder with the script
 
 ```
-git clone https://github.com/GoogleCloudPlatform/compute-migratins.git && cd compute-migrations/
+git clone https://github.com/GoogleCloudPlatform/compute-migratins.git && cd compute-migrations/instance-to-stateful-mig
 ```
 
 * Install virtual environment and dependencies
@@ -70,8 +70,8 @@ python3 migrate_script.py [-h] [-p PROJECT] -i SOURCE_INSTANCE_NAME -z SOURCE_ZO
 |`-z` |`--source_zone`            |                            |zone name of the GCP instance you want to migrate.
 |`-m` |`--mig_name`               |                            |name of the stateful MIG you want to create.
 |`-t` |`--target_instance_name`   |                            |name of the stateful MIG you want to create.
-|     |`--regional`               | False                      |will create regional stateful MIG, which deploys instances to multiple zones across the same region
-|     |`--delete_source_instance` | False                      |instance will be deleted after script execuption
+|     |`--regional`               | False                      |if provide, will create regional stateful MIG, which deploys instances to multiple zones across the same region
+|     |`--delete_source_instance` | False                      |if provide, instance will be deleted after script execuption
 
 ### `-h`, `--help`
 show this help message and exit

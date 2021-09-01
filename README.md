@@ -1,4 +1,4 @@
-# Google Compute Engine Migrations scripts
+# Google Compute Engine migrations scripts
 
 This repository hosts a set of scripts that help to migrate your instances
 
