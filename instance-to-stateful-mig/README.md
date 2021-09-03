@@ -1,35 +1,27 @@
 # Migrate single instance to stateful MIG
 
-This pages describes how to run python3 script to migrate your single GCP instance to a stateful Managed Instance Group.
+This page describes how to run Python3 script to migrate your single GCP instance to a stateful Managed Instance Group.
 
 If you want to do the same manually, you can use this [tutorial](https://cloud.google.com/compute/docs/tutorials/migrate-workload-to-stateful-mig).
 
 # Script steps
-1. Stop source instance if needed
+1. Stop source instance if the instance haven't been stopped
 2. Create images for all disks
 3. Create an instance template from source instance
 4. Create an empty MIG
-5. Delete source image if needed
+5. Delete source instance if needed
 6. Add instance to MIG
 
 # Requirements
 
 To run this script you need to meet the following criteria:
 
-* Python version >= 3.6.
+* You need Python version >= 3.6.
 * You need `pipenv` or some other virtual environment manager to install the script dependencies.
 * Yout need to enable the [Compute Engine API](https://cloud.google.com/compute/)
-* **Important** Your instance have to be stopped during the script execution
+* **Important** Your instance will be stopped during the script execution
 
 # Authentication
-
-* Using Google Cloud SDK
-
-```
-gcloud auth application-default login
-```
-
-* Using environment variable
 
 You should download a service account JSON keyfile and point to it using an environment variable:
 
