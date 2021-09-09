@@ -5,12 +5,12 @@ This page describes how to run Python3 script to migrate your single GCP instanc
 If you want to do the same manually, you can use this [tutorial](https://cloud.google.com/compute/docs/tutorials/migrate-workload-to-stateful-mig).
 
 # Script steps
-1. Stop source instance if the instance haven't been stopped
+1. Stop source instance if the instance hasn't been stopped
 2. Create images for all disks
-3. Create an instance template from source instance
+3. Create an instance template from the source instance
 4. Create an empty MIG
-5. Delete source instance if needed
-6. Add instance to MIG
+5. Delete the source instance if needed
+6. Add a newly created instance to MIG
 
 # Requirements
 
@@ -18,7 +18,7 @@ To run this script you need to meet the following criteria:
 
 * You need Python version >= 3.6.
 * You need `pipenv` or some other virtual environment manager to install the script dependencies.
-* Yout need to enable the [Compute Engine API](https://cloud.google.com/compute/)
+* You need to enable the [Compute Engine API](https://cloud.google.com/compute/)
 * **Important** Your instance will be stopped during the script execution
 
 # Authentication
@@ -81,16 +81,15 @@ Zone name of the GCP instance you want to migrate.
 Stateful MIG name, that will be created
 
 ### `-t`, `--target_instance_name`
-Target instance name, that will be added to stateful MIG.
+Target instance name, that will be added to the stateful MIG.
 **Note** If `--source_instance_name` equals to `--target_instance_name` or empty, then you should explicitly set `--delete_source_instance` paremeter to True.
 
-### `--regional` (Default: False)
-If this flag is set to True, then stateful MIG will be [regional](https://cloud.google.com/compute/docs/instance-groups/regional-migs), which deploys instances to multiple zones across the same region. If the flas is set to False, then stateful MIG will be zonal, which deploys instances to a single zone.
+### `--regional`
+If this flag is set, then stateful MIG will be [regional](https://cloud.google.com/compute/docs/instance-groups/regional-migs), which deploys instances to multiple zones across the same region. If the flas isn't set, then stateful MIG will be zonal, which deploys instances to a single zone.
 
-
-### `--delete_source_instance` (Default: False)
-If this flag is set to True, then source instance will be deleted. 
-**Note**: please, delete instance if you strongly want to save original instance name. You can delete source instance manually after script execution.
+### `--delete_source_instance`
+If this flag is set, then the source instance will be deleted. 
+**Important**: please, delete an instance if you strongly want to save original instance name. You can delete source instance manually after script execution.
 
 # Execution example
 ```

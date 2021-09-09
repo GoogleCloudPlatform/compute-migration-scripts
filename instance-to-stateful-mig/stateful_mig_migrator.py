@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import argparse
 import time
+import typing
 import uuid
 
 import google.auth
@@ -30,7 +32,7 @@ region_instance_group_managers_client = compute_v1.RegionInstanceGroupManagersCl
 
 
 class StatefulMIGMigrator:
-    def __init__(self, args):
+    def __init__(self, args: argparse.Namespace) -> None:
         self.project = args.project if args.project else google.auth.default()[1]
 
         self.source_instance_name = args.source_instance_name
@@ -48,20 +50,21 @@ class StatefulMIGMigrator:
         self.target_region = None
 
         if args.regional:
+            # If MIG is regional, then save only region part (ex. "us-central1-a" -> "us-central1")
             self.target_region = "-".join(self.source_zone.split("-")[:-1])
         else:
             self.target_zone = self.source_zone
 
         self.delete_source_instance = args.delete_source_instance
 
-    def _get_source_instance(self):
+    def _get_source_instance(self) -> None:
         return instance_client.get(
             project=self.project,
             zone=self.source_zone,
             instance=self.source_instance_name,
         )
 
-    def _stop_source_instance(self):
+    def _stop_source_instance(self) -> None:
         operation = instance_client.stop(
             project=self.project,
             zone=self.source_zone,
@@ -70,7 +73,7 @@ class StatefulMIGMigrator:
 
         self._wait_for_operation(operation, self.source_zone)
 
-    def _delete_source_instance(self):
+    def _delete_source_instance(self) -> None:
         operation = instance_client.delete(
             project=self.project,
             zone=self.source_zone,
@@ -79,13 +82,13 @@ class StatefulMIGMigrator:
 
         self._wait_for_operation(operation, self.source_zone)
 
-    def _build_template_link(self, template_name):
+    def _build_template_link(self, template_name: str) -> str:
         return f"projects/{self.project}/global/instanceTemplates/{template_name}"
 
-    def _build_image_link(self, image_name):
+    def _build_image_link(self, image_name: str) -> str:
         return f"projects/{self.project}/global/images/{image_name}"
 
-    def _create_image_for_disk(self, disk):
+    def _create_image_for_disk(self, disk: compute_v1.AttachedDisk) -> str:
         image_name = f"{disk.device_name}-image-{uuid.uuid4().hex[:6]}"
 
         operation = images_client.insert(
@@ -97,7 +100,7 @@ class StatefulMIGMigrator:
 
         return image_name
 
-    def _create_empty_mig(self, template_name):
+    def _create_empty_mig(self, template_name: str) -> None:
         if self.target_zone:
             operation = instance_group_managers_client.insert(
                 project=self.project,
@@ -119,15 +122,15 @@ class StatefulMIGMigrator:
                     "target_size": 0,
                     "name": self.mig_name,
                     "instance_template": self._build_template_link(template_name),
+                    # Set the instance redistribution type to NONE so that the MIG does not automatically redistribute instances across zones.
+                    # (https://cloud.google.com/compute/docs/instance-groups/distributing-instances-with-regional-instance-groups#disabling_and_reenabling_proactive_instance_redistribution)
                     "update_policy": {"instance_redistribution_type": "NONE"},
                 },
             )
 
             self._wait_for_operation(operation, zone=None, region=self.target_region)
 
-        time.sleep(3)
-
-    def _create_instance_template(self, disk_configs):
+    def _create_instance_template(self, disk_configs: typing.List[dict]) -> str:
         template_name = f"{self.source_instance_name}-template-{uuid.uuid4().hex[:6]}"
 
         operation = instance_templates_client.insert(
@@ -143,7 +146,7 @@ class StatefulMIGMigrator:
 
         return template_name
 
-    def _add_instance_to_mig(self):
+    def _add_instance_to_mig(self) -> None:
         if self.target_zone:
             operation = instance_group_managers_client.create_instances(
                 project=self.project,
@@ -156,6 +159,7 @@ class StatefulMIGMigrator:
 
             self._wait_for_operation(operation, self.target_zone)
 
+            # Waiting while all instances in the MIG will be created
             while not all(
                 instance.current_action
                 != compute_v1.ManagedInstance.CurrentAction.CREATING
@@ -179,6 +183,7 @@ class StatefulMIGMigrator:
 
             self._wait_for_operation(operation, zone=None, region=self.target_region)
 
+            # Waiting while all instances in the MIG will be created
             while not all(
                 instance.current_action
                 != compute_v1.ManagedInstance.CurrentAction.CREATING
@@ -190,7 +195,9 @@ class StatefulMIGMigrator:
             ):
                 time.sleep(3)
 
-    def _wait_for_operation(self, operation, zone=None, region=None):
+    def _wait_for_operation(
+        self, operation: compute_v1.Operation, zone: str = None, region: str = None
+    ) -> None:
         while operation.status != compute_v1.Operation.Status.DONE:
             if zone:
                 operation = zone_operations_client.wait(
@@ -205,7 +212,7 @@ class StatefulMIGMigrator:
                     operation=operation.name, project=self.project,
                 )
 
-    def migrate(self):
+    def migrate(self) -> None:
         script_start_time = time.time()
         self.source_instance = self._get_source_instance()
 
