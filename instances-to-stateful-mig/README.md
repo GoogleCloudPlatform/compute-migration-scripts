@@ -1,14 +1,14 @@
-# Migrate group of single instances to stateful MIG
+# Migrate a group of individual instances to a stateful MIG
 
 This page describes how to run a Python3 script that automates
-the migration of your group of individual instances to a stateful MIG
+the migration of your group of individual instances to a stateful MIG.
 
 If you want to perform the same steps manually, follow this [tutorial](https://cloud.google.com/compute/docs/tutorials/migrate-workload-to-stateful-mig).
 
 ## Script steps
 The automated script performs the following steps to migrate your instances:
 
-1. Create an instance template based on the properties of a chosen instance, expect for attached data disks.
+1. Create an instance template based on the properties of a chosen instance, except for attached data disks.
 2. Create an empty MIG.
 3. For each instance in the original group, perform the following steps:
    1. If the instance hasn't been stopped, then stop it.
@@ -38,7 +38,7 @@ To run this script you need to meet the following requirements:
 * Python version >= 3.6.
 * `pipenv` or other virtual environment manager to install the
   script dependencies.
-* [Compute Engine API](https://cloud.google.com/compute/) enabled
+* [Compute Engine API](https://cloud.google.com/compute/) enabled.
 
 ## Authentication
 
@@ -86,7 +86,6 @@ optional arguments:
   --regional
 ```
 
-## Arguments
 ## Quick reference table
 |Short|Long                       |Default                     |Description
 |-----|---------------------------|----------------------------|----------------------------------------
