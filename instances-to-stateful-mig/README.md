@@ -20,7 +20,7 @@ Note that the script leaves all standalone VMs stopped with their disks intact, 
 if the MIG doesn't work as expected.
 This results in additional costs, for the following reasons:
 
-1.  The script doesn't delete the original disks.
+1.  The script doesn't detatch or delete the original disks.
 2.  The script creates images from existing disks.
 
 ## Limitations
