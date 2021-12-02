@@ -8,13 +8,13 @@ If you want to perform the same steps manually, follow this [tutorial](https://c
 ## Script steps
 The automated script performs the following steps to migrate your instances:
 
-1. Create an instance template based on the properties of a chosen instance, except for attached data disks.
-2. Create an empty MIG.
-3. For each instance in the original group, perform the following steps:
-   1. If the instance hasn't been stopped, then stop it.
-   2. Clone all instance disks except the boot disk.
-   3. Create an instance in the MIG based on the instance template from point 1, and include the cloned disks from the source instance.
-4. Print commands for cleaning up the source instances after you have verified that the stateful MIG serves your needs.
+1. Stop all instances
+2. Create an instance template based on the properties of a chosen instance, except for attached data disks.
+3. Create an empty MIG.
+4. For each instance in the original group, perform the following steps:
+   1. Clone all instance disks except the boot disk.
+   2. Create an instance in the MIG based on the instance template from point 1, and include the cloned disks from the source instance.
+5. Print commands for cleaning up the source instances after you have verified that the stateful MIG serves your needs.
 
 Note that the script leaves all standalone VMs stopped with their disks intact, for easy reverting 
 if the MIG doesn't work as expected.
@@ -27,7 +27,7 @@ This results in additional costs, for the following reasons:
 
 *   All source instances must have the same instance configuration.
 *   Boot disks must be stateless.
-*   Stateful IPs are not supported. 
+*   Preservation of IP addresses is not supported.
 *   The script stops all the running standalone source instances.
 *   The script doesn't reuse the standalone VM names in the MIG.
 

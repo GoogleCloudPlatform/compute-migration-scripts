@@ -253,7 +253,20 @@ class StatefulMIGMigrator:
                 self.base_instance_name, self.source_instance_zone
             )
 
-            # Step 1. Create an instance template from the base instance
+            # Step 1. Stop all instances
+
+            for instance_name in self.source_instances:
+                instance = self._get_instance(instance_name, self.source_instance_zone)
+
+                if instance.status != compute_v1.Instance.Status.TERMINATED:
+                    print(f"Instance {instance.name} is not stopped. Stopping ...")
+
+                    self._stop_instance(instance_name, self.source_instance_zone)
+
+                    print(f"Instance {instance.name} stopped")
+                    print("==========")
+
+            # Step 2. Create an instance template from the base instance
 
             base_disk_configs = []
 
@@ -279,7 +292,7 @@ class StatefulMIGMigrator:
             print(f"Instance template {base_instance_template_name} created")
             print("==========")
 
-            # Step 2. Create an empty MIG
+            # Step 3. Create an empty MIG
 
             print(f"Creating empty MIG {self.mig_name}...")
             self._create_empty_mig(base_instance_template_name)
@@ -287,23 +300,15 @@ class StatefulMIGMigrator:
             print(f"MIG {self.mig_name} created")
             print("==========")
 
-            # Step 3. Add instances to MIG one by one
+            # Step 4. Add instances to MIG one by one
 
             for instance_name in self.source_instances:
                 instance = self._get_instance(instance_name, self.source_instance_zone)
 
-                if instance.status != compute_v1.Instance.Status.TERMINATED:
-                    print(f"Instance {instance.name} is not stopped. Stopping ...")
-
-                    self._stop_instance(instance_name, self.source_instance_zone)
-
-                    print(f"Instance {instance.name} stopped")
-                    print("==========")
-
                 new_disks_config = {}
 
                 for disk in instance.disks:
-                    # boot disk will be created from teplate
+                    # boot disk will be created from template
                     if disk.boot:
                         continue
 
