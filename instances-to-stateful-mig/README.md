@@ -16,11 +16,11 @@ The automated script performs the following steps to migrate your instances:
    3. Create an instance in the MIG based on the instance template from point 1, and include the cloned disks from the source instance.
 4. Print commands for cleaning up the source instances after you have verified that the stateful MIG serves your needs.
 
-Note that the script leaves all standalone VMs intact, for easy reverting 
+Note that the script leaves all standalone VMs stopped with their disks intact, for easy reverting 
 if the MIG doesn't work as expected.
-This determines additional costs, for the following reasons:
+This results in additional costs, for the following reasons:
 
-1.  The script doesn't detach the original disks.
+1.  The script doesn't detatch or delete the original disks.
 2.  The script creates images from existing disks.
 
 ## Limitations
@@ -60,7 +60,7 @@ gcloud auth application-default login
 * Clone the repository and move to the folder with the script.
 
 ```
-git clone https://github.com/GoogleCloudPlatform/compute-migration-scripts.git && cd compute-migrations/instance-to-stateful-mig
+git clone https://github.com/GoogleCloudPlatform/compute-migration-scripts.git && cd compute-migration-scripts/instances-to-stateful-mig
 ```
 
 * Install virtual environment and dependencies.
@@ -104,7 +104,7 @@ Show the help text and exit.
 Project name of the GCP instance you want to migrate. If project is not provided, it
 will be taken from credentials.
 
-### `-i`, `--source_instances`
+### `-s`, `--source_instances`
 List of the individual GCP instances you want to migrate. You should provide at
 least 1 instance.
 
