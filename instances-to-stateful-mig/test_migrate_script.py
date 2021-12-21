@@ -33,7 +33,7 @@ def create_instance(instance_name: str, disks: typing.List[typing.Dict]) -> None
             },
             "auto_delete": True,
             "boot": True,
-            "type_": compute_v1.AttachedDisk.Type.PERSISTENT,
+            "type_": "PERSISTENT",
         },
         {
             "device_name": data_disk_name,
@@ -43,7 +43,7 @@ def create_instance(instance_name: str, disks: typing.List[typing.Dict]) -> None
                 "disk_size_gb": 50,
             },
             "auto_delete": True,
-            "type_": compute_v1.AttachedDisk.Type.PERSISTENT,
+            "type_": "PERSISTENT",
         },
     ]
     intance_create_request = compute_v1.InsertInstanceRequest(
@@ -57,7 +57,7 @@ def create_instance(instance_name: str, disks: typing.List[typing.Dict]) -> None
         },
     )
 
-    operation = instance_client.insert(request=intance_create_request)
+    operation = instance_client.insert_unary(request=intance_create_request)
     while operation.status != compute_v1.Operation.Status.DONE:
         operation = operation_client.wait(
             operation=operation.name, zone=default_zone, project=default_project_id
@@ -65,7 +65,7 @@ def create_instance(instance_name: str, disks: typing.List[typing.Dict]) -> None
 
 
 def delete_instance(instance_name: str) -> None:
-    operation = instance_client.delete(
+    operation = instance_client.delete_unary(
         project=default_project_id, zone=default_zone, instance=instance_name
     )
 
@@ -82,7 +82,7 @@ def test_regional_migration(capsys: typing.Any) -> None:
 
     mig_name = "mig-" + uuid.uuid4().hex[:10]
 
-    operation = region_disks_client.insert(
+    operation = region_disks_client.insert_unary(
         project=default_project_id,
         region=default_region,
         disk_resource={
@@ -111,13 +111,13 @@ def test_regional_migration(capsys: typing.Any) -> None:
                 },
                 "auto_delete": True,
                 "boot": True,
-                "type_": compute_v1.AttachedDisk.Type.PERSISTENT,
+                "type_": "PERSISTENT",
             },
             {
                 "device_name": data_disk_name,
                 "source": f"projects/{default_project_id}/regions/{default_region}/disks/{data_disk_name}",
                 "auto_delete": True,
-                "type_": compute_v1.AttachedDisk.Type.PERSISTENT,
+                "type_": "PERSISTENT",
             },
         ],
     )
@@ -133,6 +133,7 @@ def test_regional_migration(capsys: typing.Any) -> None:
             "-m",
             mig_name,
             "--regional",
+            "--image_for_boot_disk",
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -151,7 +152,7 @@ def test_regional_migration(capsys: typing.Any) -> None:
 
     assert created_mig.target_size == 1
 
-    operation = region_instance_group_managers_client.delete(
+    operation = region_instance_group_managers_client.delete_unary(
         project=default_project_id,
         region=default_region,
         instance_group_manager=mig_name,

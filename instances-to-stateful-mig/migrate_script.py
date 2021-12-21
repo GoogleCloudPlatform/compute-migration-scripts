@@ -27,6 +27,11 @@ if __name__ == "__main__":
     parser.add_argument("--regional", dest="regional", action="store_true")
     parser.set_defaults(regional=False)
 
+    parser.add_argument(
+        "--image_for_boot_disk", dest="image_for_boot_disk", action="store_true"
+    )
+    parser.set_defaults(image_for_boot_disk=False)
+
     args = parser.parse_args()
 
     if len(args.source_instances) == 0:
