@@ -39,7 +39,7 @@ class StatefulMIGMigrator:
         self.source_instances = args.source_instances
         self.source_instance_zone = args.source_instance_zone
         self.mig_name = args.mig_name
-        self.image_for_book_disk = args.image_for_boot_disk
+        self.image_for_boot_disk = args.image_for_boot_disk
 
         self.base_instance_name = (
             args.base_instance_name
@@ -172,7 +172,7 @@ class StatefulMIGMigrator:
             # Waiting while all instances in the MIG will be created
             while not all(
                 instance.current_action
-                != compute_v1.ManagedInstance.CurrentAction.CREATING
+                != compute_v1.ManagedInstance.CurrentAction.CREATING.name
                 for instance in instance_group_managers_client.list_managed_instances(
                     project=self.project,
                     zone=self.zone,
@@ -203,7 +203,7 @@ class StatefulMIGMigrator:
             # Waiting while all instances in the MIG will be created
             while not all(
                 instance.current_action
-                != compute_v1.ManagedInstance.CurrentAction.CREATING
+                != compute_v1.ManagedInstance.CurrentAction.CREATING.name
                 for instance in region_instance_group_managers_client.list_managed_instances(
                     project=self.project,
                     region=self.region,
@@ -264,7 +264,7 @@ class StatefulMIGMigrator:
             for instance_name in self.source_instances:
                 instance = self._get_instance(instance_name, self.source_instance_zone)
 
-                if instance.status != "TERMINATED":
+                if instance.status != compute_v1.Instance.Status.TERMINATED.name:
                     print(f"Instance {instance.name} is not stopped. Stopping ...")
 
                     self._stop_instance(instance_name, self.source_instance_zone)
@@ -278,7 +278,7 @@ class StatefulMIGMigrator:
 
             for disk in self.base_instance.disks:
                 if disk.boot:
-                    if self.image_for_book_disk:
+                    if self.image_for_boot_disk:
                         print(
                             f"Creating disk image for boot image {disk.device_name} ..."
                         )

@@ -33,7 +33,7 @@ def create_instance(instance_name: str, disks: typing.List[typing.Dict]) -> None
             },
             "auto_delete": True,
             "boot": True,
-            "type_": "PERSISTENT",
+            "type_": compute_v1.AttachedDisk.Type.PERSISTENT.name,
         },
         {
             "device_name": data_disk_name,
@@ -43,7 +43,7 @@ def create_instance(instance_name: str, disks: typing.List[typing.Dict]) -> None
                 "disk_size_gb": 50,
             },
             "auto_delete": True,
-            "type_": "PERSISTENT",
+            "type_": compute_v1.AttachedDisk.Type.PERSISTENT.name,
         },
     ]
     intance_create_request = compute_v1.InsertInstanceRequest(
@@ -111,13 +111,13 @@ def test_regional_migration(capsys: typing.Any) -> None:
                 },
                 "auto_delete": True,
                 "boot": True,
-                "type_": "PERSISTENT",
+                "type_": compute_v1.AttachedDisk.Type.PERSISTENT.name,
             },
             {
                 "device_name": data_disk_name,
                 "source": f"projects/{default_project_id}/regions/{default_region}/disks/{data_disk_name}",
                 "auto_delete": True,
-                "type_": "PERSISTENT",
+                "type_": compute_v1.AttachedDisk.Type.PERSISTENT.name,
             },
         ],
     )
