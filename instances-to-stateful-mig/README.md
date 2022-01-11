@@ -9,12 +9,13 @@ If you want to perform the same steps manually, follow this [tutorial](https://c
 The automated script performs the following steps to migrate your instances:
 
 1. Stop all instances
-2. Create an instance template based on the properties of a chosen instance, except for attached data disks.
-3. Create an empty MIG.
-4. For each instance in the original group, perform the following steps:
+1. Create disk image for boot disk if needed
+1. Create an instance template based on the properties of a chosen instance, except for attached data disks.
+1. Create an empty MIG.
+1. For each instance in the original group, perform the following steps:
    1. Clone all instance disks except the boot disk.
-   2. Create an instance in the MIG based on the instance template from point 1, and include the cloned disks from the source instance.
-5. Print commands for cleaning up the source instances after you have verified that the stateful MIG serves your needs.
+   1. Create an instance in the MIG based on the instance template from point 1, and include the cloned disks from the source instance.
+1. Print commands for cleaning up the source instances after you have verified that the stateful MIG serves your needs.
 
 Note that the script leaves all standalone VMs stopped with their disks intact, for easy reverting 
 if the MIG doesn't work as expected.
@@ -96,6 +97,7 @@ optional arguments:
 |`-z` |`--source_zone`            |                            |zone name of the GCP instance you want to migrate.
 |`-m` |`--mig_name`               |                            |name of the stateful MIG you want to create.
 |     |`--regional`               | False                      |if provided, will create regional stateful MIG, which deploys instances to multiple zones across the same region
+|     |`--image_for_boot_disk`    | False                      |if provided, will create disk image for boot disk of base GCP instance
 
 ### `-h`, `--help`
 Show the help text and exit.
@@ -126,40 +128,56 @@ isn't set, then stateful MIG will be zonal, which deploys instances to a single
 zone. Instance redistribution type will be set to `NONE`. You cannot change 
 instance redistribution for stateful MIGs. See [Limitations](https://cloud.google.com/compute/docs/instance-groups/configuring-stateful-migs#limitations)
 
+### `--image_for_boot_disk`
+If this flag is set, then script will create disk image for boot disk of base GCP instance.
+
 ## Execution example
 ```
-python3 migrate_script.py -s instance-1 instance-2 instance-3 -z us-central1-a -m my-mig
+python3 migrate_script.py -s instance-1 instance-2 instance-3 -z us-central1-a -m my-mig --image_for_boot_disk
+Instance instance-1 is not stopped. Stopping ...
+Instance instance-1 stopped
+==========
+Instance instance-2 is not stopped. Stopping ...
+Instance instance-2 stopped
+==========
+Instance instance-3 is not stopped. Stopping ...
+Instance instance-3 stopped
+==========
+Creating disk image for boot image instance-1 ...
+Disk image instance-1-image-ed0d24 created
+==========
 Creating base instance template ...
-Instance template instance-1-template-bf7831 created
+Instance template instance-1-template-004cb8 created
 ==========
 Creating empty MIG my-mig...
 MIG my-mig created
 ==========
-Creating disk a-disk-1-784c10 from disk a-disk-1
+Creating disk a-disk-1-bb2a30 from disk a-disk-1
 ==========
-Creating disk a-disk-2-133570 from disk a-disk-2
+Creating disk a-disk-2-f7344b from disk a-disk-2
 ==========
-Adding instance instance-1-f9443a to my-mig MIG
-==========
-
-Creating disk a-disk-3-b53e04 from disk a-disk-3
-==========
-Adding instance instance-2-757095 to my-mig MIG
+Adding instance instance-1-b7273d to my-mig MIG
 ==========
 
-Adding instance instance-3-c80f95 to my-mig MIG
+Creating disk a-disk-3-7498a2 from disk a-disk-3
+==========
+Adding instance instance-2-6475c6 to my-mig MIG
 ==========
 
-Migration successfully finished. Time spent: 127 seconds.
+Adding instance instance-3-17d7c7 to my-mig MIG
+==========
+
+Migration successfully finished. Time spent: 457 seconds.
 Use the following command to delete the individual source instances:
 * gcloud compute instances delete instance-1 instance-2 instance-3
 
 To revert all changes, use this clean up commands:
-* gcloud compute instance-templates delete instance-1-template-bf7831
 * gcloud compute instance-groups managed delete my-mig
-* gcloud compute disks delete a-disk-1-784c10
-* gcloud compute disks delete a-disk-2-133570
-* gcloud compute disks delete a-disk-3-b53e04
+* gcloud compute instance-templates delete instance-1-template-004cb8
+* gcloud compute disks delete a-disk-1-bb2a30
+* gcloud compute disks delete a-disk-2-f7344b
+* gcloud compute disks delete a-disk-3-7498a2
+* gcloud compute images delete instance-1-image-ed0d24
 
 Futher steps:
 - Configuring autohealing: https://cloud.google.com/compute/docs/tutorials/migrate-workload-to-stateful-mig#configuring_autohealing

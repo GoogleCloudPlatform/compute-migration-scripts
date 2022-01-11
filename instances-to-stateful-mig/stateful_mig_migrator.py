@@ -39,6 +39,7 @@ class StatefulMIGMigrator:
         self.source_instances = args.source_instances
         self.source_instance_zone = args.source_instance_zone
         self.mig_name = args.mig_name
+        self.image_for_boot_disk = args.image_for_boot_disk
 
         self.base_instance_name = (
             args.base_instance_name
@@ -61,7 +62,7 @@ class StatefulMIGMigrator:
         )
 
     def _stop_instance(self, instance_name: str, instance_zone: str) -> None:
-        operation = instance_client.stop(
+        operation = instance_client.stop_unary(
             project=self.project, zone=instance_zone, instance=instance_name,
         )
 
@@ -91,7 +92,7 @@ class StatefulMIGMigrator:
     def _create_image_for_disk(self, disk: compute_v1.AttachedDisk) -> str:
         image_name = f"{disk.device_name}-image-{uuid.uuid4().hex[:6]}"
 
-        operation = images_client.insert(
+        operation = images_client.insert_unary(
             project=self.project,
             image_resource={"name": image_name, "source_disk": disk.source},
         )
@@ -102,7 +103,7 @@ class StatefulMIGMigrator:
 
     def _create_empty_mig(self, template_name: str) -> None:
         if self.zone:
-            operation = instance_group_managers_client.insert(
+            operation = instance_group_managers_client.insert_unary(
                 project=self.project,
                 zone=self.zone,
                 instance_group_manager_resource={
@@ -115,7 +116,7 @@ class StatefulMIGMigrator:
             self._wait_for_operation(operation, self.zone)
 
         if self.region:
-            operation = region_instance_group_managers_client.insert(
+            operation = region_instance_group_managers_client.insert_unary(
                 project=self.project,
                 region=self.region,
                 instance_group_manager_resource={
@@ -133,7 +134,7 @@ class StatefulMIGMigrator:
     def _create_instance_template(self, disk_configs: typing.List[dict]) -> str:
         template_name = f"{self.base_instance_name}-template-{uuid.uuid4().hex[:6]}"
 
-        operation = instance_templates_client.insert(
+        operation = instance_templates_client.insert_unary(
             project=self.project,
             instance_template_resource={
                 "name": template_name,
@@ -150,7 +151,7 @@ class StatefulMIGMigrator:
         self, instance_name: str, attached_disks, metadata
     ) -> None:
         if self.zone:
-            operation = instance_group_managers_client.create_instances(
+            operation = instance_group_managers_client.create_instances_unary(
                 project=self.project,
                 zone=self.zone,
                 instance_group_manager=self.mig_name,
@@ -171,7 +172,7 @@ class StatefulMIGMigrator:
             # Waiting while all instances in the MIG will be created
             while not all(
                 instance.current_action
-                != compute_v1.ManagedInstance.CurrentAction.CREATING
+                != compute_v1.ManagedInstance.CurrentAction.CREATING.name
                 for instance in instance_group_managers_client.list_managed_instances(
                     project=self.project,
                     zone=self.zone,
@@ -181,7 +182,7 @@ class StatefulMIGMigrator:
                 time.sleep(3)
 
         if self.region:
-            operation = region_instance_group_managers_client.create_instances(
+            operation = region_instance_group_managers_client.create_instances_unary(
                 project=self.project,
                 region=self.region,
                 instance_group_manager=self.mig_name,
@@ -202,7 +203,7 @@ class StatefulMIGMigrator:
             # Waiting while all instances in the MIG will be created
             while not all(
                 instance.current_action
-                != compute_v1.ManagedInstance.CurrentAction.CREATING
+                != compute_v1.ManagedInstance.CurrentAction.CREATING.name
                 for instance in region_instance_group_managers_client.list_managed_instances(
                     project=self.project,
                     region=self.region,
@@ -231,6 +232,8 @@ class StatefulMIGMigrator:
     def _print_cleanup_commands(self) -> None:
         print("\nTo revert all changes, use this clean up commands:")
 
+        self.created_artifacts.sort(key=lambda x: x["priority"])
+
         for artifact in self.created_artifacts:
             if artifact["key"] == "instance_template":
                 print(f"* gcloud compute instance-templates delete {artifact['name']}")
@@ -242,6 +245,9 @@ class StatefulMIGMigrator:
                 print(
                     f"* gcloud compute instance-groups managed delete {artifact['name']}"
                 )
+
+            if artifact["key"] == "image":
+                print(f"* gcloud compute images delete {artifact['name']}")
         print()
 
     def migrate(self) -> None:
@@ -258,7 +264,7 @@ class StatefulMIGMigrator:
             for instance_name in self.source_instances:
                 instance = self._get_instance(instance_name, self.source_instance_zone)
 
-                if instance.status != compute_v1.Instance.Status.TERMINATED:
+                if instance.status != compute_v1.Instance.Status.TERMINATED.name:
                     print(f"Instance {instance.name} is not stopped. Stopping ...")
 
                     self._stop_instance(instance_name, self.source_instance_zone)
@@ -272,13 +278,33 @@ class StatefulMIGMigrator:
 
             for disk in self.base_instance.disks:
                 if disk.boot:
+                    if self.image_for_boot_disk:
+                        print(
+                            f"Creating disk image for boot image {disk.device_name} ..."
+                        )
+                        image_name = self._create_image_for_disk(disk)
+                        print(f"Disk image {image_name} created")
+                        print("==========")
+
+                        self.created_artifacts.append(
+                            {"key": "image", "name": image_name, "priority": 4}
+                        )
+
+                        base_disk_configs.append(
+                            {
+                                "device_name": disk.device_name,
+                                "custom_image": self._build_image_link(image_name),
+                                "instantiate_from": "CUSTOM_IMAGE",
+                            }
+                        )
+
                     continue
 
                 # We should remove all disks (except boot disk) from template
                 base_disk_configs.append(
                     {
                         "device_name": disk.device_name,
-                        "instantiate_from": compute_v1.DiskInstantiationConfig.InstantiateFrom.DO_NOT_INCLUDE,
+                        "instantiate_from": "DO_NOT_INCLUDE",
                     }
                 )
 
@@ -287,7 +313,11 @@ class StatefulMIGMigrator:
                 base_disk_configs
             )
             self.created_artifacts.append(
-                {"key": "instance_template", "name": base_instance_template_name}
+                {
+                    "key": "instance_template",
+                    "name": base_instance_template_name,
+                    "priority": 2,
+                }
             )
             print(f"Instance template {base_instance_template_name} created")
             print("==========")
@@ -296,7 +326,9 @@ class StatefulMIGMigrator:
 
             print(f"Creating empty MIG {self.mig_name}...")
             self._create_empty_mig(base_instance_template_name)
-            self.created_artifacts.append({"key": "mig", "name": self.mig_name})
+            self.created_artifacts.append(
+                {"key": "mig", "name": self.mig_name, "priority": 1}
+            )
             print(f"MIG {self.mig_name} created")
             print("==========")
 
@@ -320,7 +352,7 @@ class StatefulMIGMigrator:
                     if self.zone:
                         disk_zone = self._parse_disk_zone_from_source(disk.source)
 
-                        operation = disks_client.insert(
+                        operation = disks_client.insert_unary(
                             project=self.project,
                             zone=disk_zone,
                             disk_resource={
@@ -334,7 +366,7 @@ class StatefulMIGMigrator:
                         self._wait_for_operation(operation, disk_zone)
 
                         self.created_artifacts.append(
-                            {"key": "disk", "name": new_disk_name}
+                            {"key": "disk", "name": new_disk_name, "priority": 3}
                         )
 
                         new_disks_config[
@@ -352,7 +384,7 @@ class StatefulMIGMigrator:
                             disk=disk.device_name,
                         )
 
-                        operation = region_disks_client.insert(
+                        operation = region_disks_client.insert_unary(
                             project=self.project,
                             region=disk_region,
                             disk_resource={
@@ -368,7 +400,7 @@ class StatefulMIGMigrator:
                             operation, zone=None, region=disk_region
                         )
                         self.created_artifacts.append(
-                            {"key": "disk", "name": new_disk_name}
+                            {"key": "disk", "name": new_disk_name, "priority": 3}
                         )
 
                         new_disks_config[
